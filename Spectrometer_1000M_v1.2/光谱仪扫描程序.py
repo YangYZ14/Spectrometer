@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 from PySide2.QtWidgets import QApplication
 from PySide2.QtUiTools import QUiLoader
 from PySide2 import QtCore
@@ -70,18 +71,30 @@ class Interface:
             self.ui.lineEdit_2.setText(str(self.i))
             self.data2 = self.data2 + self.data1
             self.i += 1
+            print("圈数：",self.i)
             self.data1 = np.zeros(self.N+1)
             print(self.N)
-            #移动到开始位置
-            self.ui.lineEdit.setText(str(self.sc.set_Abs_Loc(self.startWavelength)))
-            j = 0
-            #循环移动读数
-            while(j<=self.N):
-                self.ni.DAQCounterTask.start()
-                self.data1[j] = self.ni.Read()
-                print(self.data1[j])
-                self.ui.lineEdit.setText(str(self.sc.set_move(self.stepWavelength)))
-                j += 1
+            if self.i%2:
+                #移动到开始位置
+                self.ui.lineEdit.setText(str(self.sc.set_Abs_Loc(self.startWavelength)))
+                j = 0
+                #循环移动读数
+                while(j<=self.N):
+                    self.ni.DAQCounterTask.start()
+                    self.data1[j] = self.ni.Read()
+                    print(self.data1[j])
+                    self.ui.lineEdit.setText(str(self.sc.set_move(self.stepWavelength)))
+                    j += 1
+            else:
+                self.ui.lineEdit.setText(str(self.sc.set_Abs_Loc(self.stopWavelength)))
+                j = 0
+                # 循环移动读数
+                while (j <= self.N):
+                    self.ni.DAQCounterTask.start()
+                    self.data1[-j-1] = self.ni.Read()
+                    print(self.data1[-j-1])
+                    self.ui.lineEdit.setText(str(self.sc.set_move(-self.stepWavelength)))
+                    j += 1
 
     def stop(self):
         self.running = False
@@ -95,11 +108,20 @@ class Interface:
 
     def set(self):
         self.ui.lineEdit.setText(str(self.sc.set_Abs_Loc(self.ui.doubleSpinBox_5.value())))
+        self.ui.lineEdit.setText(str(self.sc.query_location()))
+        self.sc.set_stop()
+
+    #自动保存数据
+    def autosave(self):
+        c=np.transpose([self.x,self.data2])
+        save = pd.DataFrame(c)
+        save.to_csv('D:\\Spectrometer\\自动保存数据\\Cavity_test1\\cavity_1' + str(self.i) + 'cycles.csv', index=False,header=False)
 
     def update(self):
         self.p1.plot(self.x,self.data1,pen='g',clear=True)
         self.p2.plot(self.x,self.data2,pen='g',clear=True)
         self.ui.lineEdit.setText(str(self.sc.query_location()))
+        self.autosave()
         # self.ui.lineEdit.setText(str(self.sc.set_move(self.stepWavelength)))
 
 
